@@ -1,0 +1,188 @@
+---
+title: "Visualization in Python VS R"
+author: "Shukai Wang, Nancy Wang"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+For people working in Data Science field without statistical background, visualization using R might be unfamiliar to them. We hope this tutorial can help those people better use R. To achieve this goal, we summarized the most common used graphics both in Python and R. Users can have a look at difference of the effect and function of these graphics in Python and R clearly because we use the same datasets for the same types of graphic. We emphasizes on the advantages and disadvantages for both of them when dealing with different problems. 
+
+These are the packages used for R:
+Matplotlib; seaborn; numpy; pandas; sklearnl; holoviews
+
+These are the packages used for Python:
+ggplot2; gridExtra; reshape2; dplyr; vcd; gcookbook; ggalluvial; MASS
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(dplyr)
+library('vcd')
+library(gcookbook)
+library(ggalluvial)
+```
+   
+## R Visualization
+Package ggplot2 offers very strong functions for statistics study. Unlike building a probability density function separately on Python, we just need to use dnorm function in R to build the normal distribution for the hist plots.
+```{r}
+d1<-ggplot(data = iris, aes(x = Sepal.Length)) +
+  geom_histogram(aes(y = ..density..),binwidth = 0.5) +
+  geom_density(color = 'red',size=1) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(iris$Sepal.Length),
+                            sd = sd(iris$Sepal.Length)),
+                col = "#1b98e0",
+                size=1)
+d2<-ggplot(data = iris, aes(x = Sepal.Width)) +
+  geom_histogram(aes(y = ..density..),binwidth = 1/3) +
+  geom_density(color = 'red',size=1) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(iris$Sepal.Width),
+                            sd = sd(iris$Sepal.Width)),
+                col = "#1b98e0",
+                size=1)
+d3<-ggplot(data = iris, aes(x = Petal.Length)) +
+  geom_histogram(aes(y = ..density..),binwidth = 0.5) +
+  geom_density(color = 'red',size=1) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(iris$Petal.Length),
+                            sd = sd(iris$Petal.Length)),
+                col = "#1b98e0",
+                size=1)
+d4<-ggplot(data = iris, aes(x = Petal.Width)) +
+  geom_histogram(aes(y = ..density..),binwidth = 1/3) +
+  geom_density(color = 'red',size=1) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(iris$Petal.Width),
+                            sd = sd(iris$Petal.Width)),
+                col = "#1b98e0",
+                size=1)
+grid.arrange(d1,d2,d3,d4,nrow=2)
+
+```
+
+We can directly draw a box  plot for one feature. To draw for a few features together and show in one plot, we need the package reshape2 and its melt function, which is quite different from Python where we can input the whole dataframe directly and get the same result.
+```{r}
+ggplot(melt(iris), aes(x = variable, y = value)) + 
+  geom_boxplot()
+```
+
+
+
+
+```{r}
+ggplot(data = iris, mapping = aes(x = Sepal.Length, y = Sepal.Width, color=Species)) +
+  geom_point()
+```
+
+The correlation of the features is an important index to analyze the multicollinearity of variables.To draw a heatmap to represent the correlation of all the features, the procedure based on ggplot2 is little more complex than using Python. We need to specify the value for x-axis, y-axis and filling. We use melt function again here to help us get the result.
+```{r}
+df <- iris
+df <- subset(df, select=-Species)
+cormat <- round(cor(df),2)
+head(cormat)
+melted_cormat <- melt(cormat)
+#options(repr.plot.width=3,repr.plot.height=3)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()
+```
+
+
+On Python, we need to specify the variable for y-axis, otherwise the programming will has error. While here ggplot2 counts the number of variable for x-axis and does not allow to add another variable for y-axis. We should be careful about the difference when using bar plot on Python or R. Since the counts of each species are the same, we categorize the value of SepalLength to get the plot.
+```{r}
+df <- iris
+df <- df %>% mutate(Sepal.Length=case_when(between(Sepal.Length,4,5) ~ '0',
+                                           between(Sepal.Length,5,6) ~ '1',
+                                           between(Sepal.Length,6,7) ~ '2',
+                                           between(Sepal.Length,7,8) ~ '3',
+                                           ))
+ggplot(df, aes(x = Sepal.Length)) + 
+    geom_bar()
+```
+
+
+It is more convenient to implement stacked barplot and grouped barplot on R compared with Python. We categorize the value of SepalLength to get the plot.
+```{r}
+df <- iris
+df <- df %>% mutate(Sepal.Length=case_when(between(Sepal.Length,4,6) ~ '0',
+                                           between(Sepal.Length,6,8) ~ '1'))
+group <- ggplot(df, aes(x = Species, fill = Sepal.Length)) + 
+    geom_bar(position = "dodge")
+stack <- ggplot(df, aes(x = Species, fill = Sepal.Length)) + 
+    geom_bar()
+grid.arrange(group,stack,nrow=1)
+```
+
+From these two plots we can clearly see the relationship between species and the length of sepals. The lengths of Setosa's sepal are all less than 6.
+
+We randomly generated a categorical data matrix to illustrate how we build a mosaic plot, which is used to show the proportions of categorical variables.
+
+```{r}
+#mosaic plot
+# creating a random dataset 
+# creating 6 rows
+data_values <- matrix(c(80, 10, 15,
+                        70, 86, 18, 
+                        60, 30, 12,
+                        90, 20, 25,
+                        60, 96, 88, 
+                        50, 20, 32))
+```
+```{r}
+data <- as.table(
+  matrix(
+    data_values,
+    
+    # specifying the number of rows
+    nrow = 6,
+    byrow = TRUE,
+    #create variable names
+    dimnames = list(
+      Random_Rows = c('A','B','C', 'D', 'E', 'F'),
+      Random_Columns = c('col_1', 'col_2', 'col_3')
+    )
+  )
+)
+mosaic(data)
+```
+We use the tophitters2001 data set to implement the cleverland dot plot.
+```{r}
+#Load gcookbook for the tophitters2001 data set
+tophit <- tophitters2001[1:25, ]
+ggplot(tophit, aes(x = avg, y = reorder(name, avg))) +
+  geom_point()
+```
+
+
+
+We use iris datset to build a contour plot. The results clear shows the ranges of variables.
+```{r}
+#contour plot
+x <- as.numeric(as.character(iris$Sepal.Length))
+y <- as.numeric(as.character(iris$Sepal.Width))
+z <- kde2d(x, y)
+contour(z)
+```
+
+
+
+Alluvial plot is another plot method to reveal the relationship between categorical variables. We use the vaccinations dataset in r.ggalluvial package to illustrate it. 
+```{r}
+ggplot(data = vaccinations,
+       aes(axis1 = survey, axis2 = response, y = freq)) +
+  geom_alluvium(aes(fill = response),
+                curve_type = "cubic") +
+  geom_stratum() +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("Survey", "Response"),
+                   expand = c(0.15, 0.05)) +
+  theme_void()
+```
+
+
+
